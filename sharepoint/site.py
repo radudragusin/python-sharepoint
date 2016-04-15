@@ -13,7 +13,7 @@ from .users import SharePointUsers
 from .xml import soap_body, namespaces, OUT
 
 class SharePointSite(object):
-    def __init__(self, url, opener, timeout=None):
+    def __init__(self, url, opener, timeout=None, resiliant=True):
         if not url.endswith('/'):
             url += '/'
 
@@ -22,6 +22,7 @@ class SharePointSite(object):
         self.opener.post_soap = self.post_soap
         self.opener.relative = functools.partial(urljoin, url)
         self.timeout = timeout
+        self.parser = etree.XMLParser(recover=resiliant) #Recover from broken XML
 
     def post_soap(self, url, xml, soapaction=None):
         url = self.opener.relative(url)
@@ -30,7 +31,7 @@ class SharePointSite(object):
         if soapaction:
             request.add_header('Soapaction', soapaction)
         response = self.opener.open(request, timeout=self.timeout)
-        return etree.parse(response).xpath('/soap:Envelope/soap:Body/*', namespaces=namespaces)[0]
+        return etree.parse(response, parser=self.parser).xpath('/soap:Envelope/soap:Body/*', namespaces=namespaces)[0]
 
     @property
     def lists(self):
